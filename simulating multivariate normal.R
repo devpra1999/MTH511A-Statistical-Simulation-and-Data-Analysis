@@ -29,9 +29,8 @@ samp <- multinorm(mu=mu, sigma=sigma, D=D)
 
 par(mfrow=c(1,D+1)) # setting multiple graphs in a line
 
-plot(samp, main="Correlation=0.5", xlab="x1", ylab="y1")
+plot(samp, main="Correlation=0.5", xlab="X1", ylab="X2")
 for (i in 1:D){
   main = paste("marginal density of X", i, sep="")
-  plot(density(samp[,i]), main="marginal density of X1")
+  plot(density(samp[,i]), main=main)
 }
-x
