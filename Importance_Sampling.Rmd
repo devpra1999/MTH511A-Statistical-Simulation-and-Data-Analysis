@@ -1,0 +1,140 @@
+---
+title: "Importance Sampling"
+author: "Dev Srivastava"
+date: "05/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Importance Sampling
+
+The key components of importance sampling are:
+
+* The nominal distribution(p) : The pdf of the distribution of interest
+* The function(h), whose expectation(over the nominal) we want to find
+* The importance distribution(g) : The pdf of the distribution which we'll sample
+* The importance estimator(theta^) = E[fp/q] where all the functions are applied over the sampled values from q.
+* Variance of theta^ : Should be finite(and minimised)
+
+## Importance sampling for Gamma Distribution
+
+
+
+With gamma distribution as our nominal and h as some kth moment of x, we'll want to try out different importance distributions.
+Keeping in mind, that p is of the form x^(a-1)*exp(bx) over support(0,inf) a few tried out below are:
+
+* Exponential
+* Normal
+* Gamma(different Parameters)
+
+Feel free to change the parameters and play around, and use other distributions as the importance distribution.
+
+### Using Exponential Distribution
+
+```{r Gamma-using-exponential}
+imp_gamma_exp <- function(n = 1e4, moment = 1, alpha = 1, beta = 1, lambda = 0.5){
+    samp <- rexp(n, lambda)
+    theta <- (samp^moment * dgamma(samp, shape = alpha, rate = beta))/dexp(samp, lambda)
+    return(theta)
+}
+
+n = 1e4 
+k = 1
+alpha = 2
+beta = 2
+lambda = 1
+
+vals <- imp_gamma_exp(n,k,alpha,beta,lambda)
+mean(vals)
+var(vals)
+
+x = seq(0,10,length.out = 1e3)
+plot(x,dgamma(x,alpha,beta), type = "l", col = "red", lwd = 3, ylab = "Density", main = "Importance Sampling of Gamma using Exponential")
+lines(x,dexp(x,lambda), col = "blue", lwd = 2)
+
+gam <- paste0("Gamma(",alpha,",",beta,")")
+ex <- paste0("Exp(",lambda,")")
+legend("topright",legend = c(gam,ex), col = c("red","blue"), lwd = c(3,2))
+```
+
+
+### Using Normal Distribution
+
+Below is the importance sampling of the gamma distribution using the normal distribution. one thing I found while running the simulations was that on most random simulations you might get a really low variance, however there were a few huge aberrations(jumps in variance)
+
+Thus I added a code at the end which runs the simulation N times and gives the maximum variance in these N simulations. Try playing around with the value of N(try 10,100,1000, etc.) and run them different times and see the results :)
+
+```{r Gamma-using-Normal}
+imp_gamma_normal <- function(n = 1e4, moment = 1, alpha = 1, beta = 1, mu = 1, std = 1){
+    samp <- rnorm(n, mu, std)
+    theta <- (samp^moment * dgamma(samp, shape = alpha, rate = beta))/dnorm(samp, mean = mu, sd = std)
+    return(theta)
+}
+
+n = 1e4 
+k = 1
+alpha = 2
+beta = 2
+mu = 1
+std = 1
+
+vals <- imp_gamma_normal(n,k,alpha,beta,mu,std)
+mean(vals)
+var(vals)
+
+x = seq(0,10,length.out = 1e3)
+plot(x,dgamma(x,alpha,beta), type = "l", col = "red", lwd = 3, ylab = "Density", main = "Importance Sampling of Gamma using Normal")
+lines(x,dnorm(x,mu,std), col = "blue", lwd = 2)
+gam <- paste0("Gamma(",alpha,",",beta,")")
+nor <- paste0("N(",mu,",",std^2,")")
+legend("topright",legend = c(gam,nor), col = c("red","blue"), lwd = c(3,2))
+N = 100
+variances <- numeric(N)
+for (i in 1:N){
+    vals <- imp_gamma_normal(n,k,alpha,beta,mu,std)
+    variances[i] <- var(vals)
+}
+cat("The maximum variance is",max(variances))
+```
+
+
+### Using Gamma Distribution(with different parameters)
+
+Again play around with the values. By default I have left the importance distribution's alpha and beta as the optimised ones
+
+```{r Gamma-using-Gamma}
+imp_gamma_gamma <- function(n = 1e4, moment = 1, alpha = 1, beta = 1, alpha.imp = alpha + moment, beta.imp = beta){
+    samp <- rgamma(n, alpha.imp, beta.imp)
+    theta <- (samp^moment * dgamma(samp, shape = alpha, rate = beta))/dgamma(samp, shape = alpha.imp, rate = beta.imp)
+    return(theta)
+}
+
+n = 1e4
+k = 2
+alpha = 2
+beta = 2
+alpha.imp = alpha + k
+beta.imp = beta
+
+vals <- imp_gamma_gamma(n,k,alpha,beta,alpha.imp,beta.imp)
+mean(vals)
+var(vals)
+
+x = seq(0,10,length.out = 1e3)
+plot(x,dgamma(x,alpha,beta), type = "l", col = "red", lwd = 3, ylab = "Density", main = "Importance Sampling of Gamma using Gamma")
+lines(x,dgamma(x,alpha.imp,beta.imp), col = "blue", lwd = 2)
+gam <- paste0("Gamma(",alpha,",",beta,")")
+gam.imp <- paste0("Gamma(",alpha.imp,",",beta.imp,")")
+legend("topright",legend = c(gam,gam.imp), col = c("red","blue"), lwd = c(3,2))
+#N = 100
+#variances <- numeric(N)
+#for (i in 1:N){
+#    vals <- imp_gamma_normal(n,k,alpha,beta,mu,std)
+#    variances[i] <- var(vals)
+#}
+#cat("The maximum variance is",max(variances))
+```
